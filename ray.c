@@ -5,7 +5,7 @@
 
 #define PLAYER_FOV 60
 #define PLAYER_SPEED 2
-#define PLAYER_ROT_RATE 3.5
+#define PLAYER_ROT_RATE 1
 
 const int SCALE = 2;
 const int PRECISION = 64;
@@ -14,8 +14,8 @@ const char GAME_MAP[8][8] = {
     {1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,1},
+    {1,0,1,1,1,0,0,1},
+    {1,0,1,0,1,0,0,1},
     {1,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,1},
     {1,1,1,1,1,1,1,1},
@@ -70,6 +70,10 @@ void draw_ray(Window *screen, int x, float height) {
     DrawLine(x, 0, x, (float) screen->height/2 - height, RED);
     DrawLine(x, (float) screen->height/2 - height, x, (float) screen->height/2 + height, GREEN);
     DrawLine(x, (float) screen->height/2 + height, x, screen->height, BLUE);
+    printf("Height: %f\n", height);
+    printf("Red: %f\n", (float) screen->height/2 - height);
+    printf("Green: %f\n", (float) screen->height/2 + height);
+    printf("Blue: %f\n", (float) screen->height/2);
 }
 
 float get_distance(Vec2 *ray, Vec2 *ref_pos) {
@@ -92,7 +96,7 @@ void raycast(Window *screen, Character *player) {
 }
 
 int main(void) {
-    Window window = {640, 480};
+    Window window = {320, 240};
     Window projection = {window.width/SCALE, window.height/SCALE};
     InitWindow(window.width, window.height, "RayC");
     SetTargetFPS(60);
@@ -102,6 +106,18 @@ int main(void) {
     Character player = {player_pos, PLAYER_FOV, PLAYER_SPEED, PLAYER_ROT_RATE};
 
     while (!WindowShouldClose()) {
+	if (IsKeyDown(KEY_RIGHT)) player.pos.angle += player.rotation_rate;
+	else if (IsKeyDown(KEY_LEFT)) player.pos.angle -= player.rotation_rate;
+	Vec2 step = get_vec_step(&player.pos);
+	// TODO: modify speed according to Pythagorean theorem
+	if (IsKeyDown(KEY_UP)) {
+	    player.pos.x += step.x * player.speed;
+	    player.pos.y += step.y * player.speed;
+	} else if (IsKeyDown(KEY_UP)) {
+	    player.pos.x -= step.x * player.speed;
+	    player.pos.y -= step.y * player.speed;
+	}
+
 	BeginDrawing();
 
 	    ClearBackground(RAYWHITE);
