@@ -84,7 +84,7 @@ void raycast(Window *screen, Character *player) {
     float view_angle = player->pos.angle - (float) player->fov/2;
 
     for (int i = 0; i < screen->width; i++) {
-	Vec2 ray = {player->pos.x, player->pos.y, player->pos.angle};
+	Vec2 ray = {player->pos.x, player->pos.y, view_angle};
 	raywalk(&ray);
 	float distance = get_distance(&ray, &player->pos);
 	float height = screen->height / (2*distance);
