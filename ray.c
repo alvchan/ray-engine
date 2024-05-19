@@ -66,10 +66,12 @@ void raywalk(Vec2 *ray) {
     }
 }
 
-void draw_ray(Window *screen, int x, float height) {
+void draw_ray(Window *screen, int x, float height, Character *player, Vec2 *ray) {
     DrawLine(x, 0, x, (float) screen->height/2 - height, RED);
     DrawLine(x, (float) screen->height/2 - height, x, (float) screen->height/2 + height, GREEN);
     DrawLine(x, (float) screen->height/2 + height, x, screen->height, BLUE);
+    DrawCircle(player->pos.x * 10, player->pos.y * 10, 5, PURPLE);
+    DrawCircle(ray->x, ray->y, 1, GRAY);
 }
 
 float get_distance(Vec2 *ray, Vec2 *ref_pos) {
@@ -86,7 +88,7 @@ void raycast(Window *screen, Character *player) {
 	raywalk(&ray);
 	float distance = get_distance(&ray, &player->pos);
 	float height = screen->height / (2*distance);
-	draw_ray(screen, i, height);
+	draw_ray(screen, i, height, player, &ray);
 	view_angle += (float) player->fov / screen->width;
     }
 }
