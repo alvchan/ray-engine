@@ -70,10 +70,6 @@ void draw_ray(Window *screen, int x, float height) {
     DrawLine(x, 0, x, (float) screen->height/2 - height, RED);
     DrawLine(x, (float) screen->height/2 - height, x, (float) screen->height/2 + height, GREEN);
     DrawLine(x, (float) screen->height/2 + height, x, screen->height, BLUE);
-    printf("Height: %f\n", height);
-    printf("Red: %f\n", (float) screen->height/2 - height);
-    printf("Green: %f\n", (float) screen->height/2 + height);
-    printf("Blue: %f\n", (float) screen->height/2);
 }
 
 float get_distance(Vec2 *ray, Vec2 *ref_pos) {
