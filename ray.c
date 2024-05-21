@@ -27,64 +27,91 @@ typedef struct {
 } Window;
 
 typedef struct {
-    float x;
-    float y;
-} Point;
-
-typedef struct {
-    float x;
-    float y;
-    float angle;
-} Vec2;
-
-typedef struct {
-    // TODO: reduce to vec2
-    Vec2 pos;
+    Vector2 *pos;
     int fov;
     float speed;
     float rotation_rate;
 } Character;
 
-float radians(float degree) {
-    return degree * M_PI / 180;
+float radians(float degrees) {
+    return degrees * (M_PI / 180);
 }
 
-Vec2 get_vec_step(Vec2 *ray) {
-    float x_step = cos(radians(ray->angle)) / PRECISION;
-    float y_step = sin(radians(ray->angle)) / PRECISION;
-    Vec2 step = {x_step, y_step, ray->angle};
-    return step;
+Vector2 add_vec(Vector2 *u, Vector2 *v) {
+    return (Vector2){u->x + v->x, u->y + v->y};
 }
 
-void raywalk(Vec2 *ray) {
-    // save step vec for this ray iteration
-    Vec2 step = get_vec_step(ray);
+void add_vec_mut(Vector2 *u, Vector2 *v) {
+    u->x += v->x;
+    u->y += v->y;
+}
+
+void sub_vec_mut(Vector2 *u, Vector2 *v) {
+    u->x -= v->x;
+    u->y -= v->y;
+}
+
+Vector2 mult_vec(Vector2 *u, float a) {
+    return (Vector2){u->x * a, u->y * a};
+}
+
+void mult_vec_mut(Vector2 *u, float a) {
+    u->x *= a;
+    u->y *= a;
+}
+
+Vector2 divide_vec_scalar(Vector2 *u, float a) {
+    return (Vector2){u->x/a, u->y/a};
+}
+
+void rotate_vec(Vector2 *u, float theta) {
+    theta = radians(theta);
+    u->x = u->x * cos(theta) - u->y * sin(theta);
+    u->y = u->x * sin(theta) - u->y * cos(theta);
+}
+
+float get_magnitude(Vector2 *u) {
+    return sqrt(u->x*u->x + u->y*u->y);
+}
+
+Vector2 normalize(Vector2 *u) {
+    float magnitude = get_magnitude(u);
+    return (Vector2){u->x/magnitude, u->y/magnitude};
+}
+
+Vector2 get_vec_step(Vector2 *u) {
+    // TODO: swap for dda system
+    // TODO: swap // for /* */ -> correct c comments
+    return divide_vec_scalar(u, PRECISION);
+}
+
+float get_distance(Vector2 *ray, Vector2 *ref) {
+    float distance = get_magnitude(&(Vector2){ray->x - ref->x, ray->y - ref->y});
+    //distance *= cos(radians(ray->angle - ref_pos->angle)); /* fisheye fix */
+    return distance;
+}
+
+void raywalk(Vector2 *ray) {
+    Vector2 step = get_vec_step(ray);
 
     while (GAME_MAP[(int) floor(ray->y)][(int) floor(ray->x)] == 0) {
-	ray->x += step.x;
-	ray->y += step.y;
+	add_vec_mut(ray, &step);
     }
 }
 
-void draw_ray(Window *screen, int x, float height, Character *player, Vec2 *ray) {
+void draw_ray(Window *screen, int x, float height, Character *player, Vector2 *ray) {
     DrawLine(x, 0, x, (float) screen->height/2 - height, RED);
     DrawLine(x, (float) screen->height/2 - height, x, (float) screen->height/2 + height, GREEN);
     DrawLine(x, (float) screen->height/2 + height, x, screen->height, BLUE);
-    DrawCircle(player->pos.x * 10, player->pos.y * 10, 5, PURPLE);
+    DrawCircle(player->pos->x * 10, player->pos->y * 10, 5, PURPLE);
     DrawCircle(ray->x, ray->y, 1, GRAY);
-}
-
-float get_distance(Vec2 *ray, Vec2 *ref_pos) {
-    float distance = sqrt((ray->x - ref_pos->x)*(ray->x - ref_pos->x) + (ray->y - ref_pos->y)*(ray->y - ref_pos->y));
-    distance *= cos(radians(ray->angle - ref_pos->angle)); /* fisheye fix */
-    return distance;
 }
 
 void raycast(Window *screen, Character *player) {
     float view_angle = player->pos.angle - (float) player->fov/2;
 
     for (int i = 0; i < screen->width; i++) {
-	Vec2 ray = {player->pos.x, player->pos.y, view_angle};
+	Vector2 ray = {player->pos.x, player->pos.y, view_angle};
 	raywalk(&ray);
 	float distance = get_distance(&ray, &player->pos);
 	float height = screen->height / (2*distance);
@@ -99,22 +126,17 @@ int main(void) {
     InitWindow(window.width, window.height, "RayC");
     SetTargetFPS(60);
 
-    // TODO: make a pointer?
-    Vec2 player_pos = {2, 2, 90};
+    Vector2 *player_pos = &(Vector2){2, 2};
     Character player = {player_pos, PLAYER_FOV, PLAYER_SPEED, PLAYER_ROT_RATE};
 
     while (!WindowShouldClose()) {
-	if (IsKeyDown(KEY_RIGHT)) player.pos.angle += player.rotation_rate;
-	else if (IsKeyDown(KEY_LEFT)) player.pos.angle -= player.rotation_rate;
-	Vec2 step = get_vec_step(&player.pos);
+	if (IsKeyDown(KEY_RIGHT)) rotate_vec(player.pos, player.rotation_rate);
+	else if (IsKeyDown(KEY_LEFT)) rotate_vec(player.pos, -player.rotation_rate);
+	Vector2 step = get_vec_step(player.pos);
+	mult_vec_mut(&step, player.speed);
 	// TODO: modify speed according to Pythagorean theorem
-	if (IsKeyDown(KEY_UP)) {
-	    player.pos.x += step.x * player.speed;
-	    player.pos.y += step.y * player.speed;
-	} else if (IsKeyDown(KEY_UP)) {
-	    player.pos.x -= step.x * player.speed;
-	    player.pos.y -= step.y * player.speed;
-	}
+	if (IsKeyDown(KEY_UP)) add_vec_mut(player.pos, &step);
+	else if (IsKeyDown(KEY_UP)) sub_vec_mut(player.pos, &step);
 
 	BeginDrawing();
 
