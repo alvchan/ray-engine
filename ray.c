@@ -1,7 +1,11 @@
 #include <math.h>
-#include <stdio.h>
 
 #include "raylib.h"
+
+#define MAX_DISTANCE 100
+
+#define MAP_SIZE_X 8
+#define MAP_SIZE_Y 8
 
 #define PLAYER_FOV 60
 #define PLAYER_SPEED 2
@@ -28,7 +32,8 @@ typedef struct {
 
 typedef struct {
     Vector2 *pos;
-    int fov;
+    Vector2 *dir;
+    Vector2 *plane;
     float speed;
     float rotation_rate;
 } Character;
@@ -108,16 +113,80 @@ void draw_ray(Window *screen, int x, float height, Character *player, Vector2 *r
 }
 
 void raycast(Window *screen, Character *player) {
+    // TODO: check or safeguard against shallow struct copies
+    Vector2 ray = *player->pos;
+    Vector2 ray_dir = *player->dir;
+    // step size scaling factor for length determination (a vector is comprised of a unit vector and a magnitude)
+    Vector2 ray_step_size = (Vector2){sqrt(1 + (ray_dir.y/ray_dir.x)*(ray_dir.y/ray_dir.x)), sqrt(1 + (ray_dir.x/ray_dir.y)*(ray_dir.x/ray_dir.y))};
+
+    Vector2 map_pos = ray; // the integer map cell the ray is in
+    Vector2 ray_length; // determines if ray should travel by x or y step
+
+    Vector2 step;
+
+    // Determine step sizes/direction of DDA based on ray direction
+    if (ray_dir.x < 0) { // ray moving to the left
+	step.x = -1;
+	ray_length.x = (ray.x - map_pos.x) * ray_step_size.x;
+    } else { // ray moving to the right
+	step.x = 1;
+	ray_length.x = ((map_pos.x + 1) - ray.x) * ray_step_size.x;
+    }
+    if (ray_dir.y < 0) { // ray moving downwards
+	step.y = -1;
+	ray_length.y = (ray.y - map_pos.y) * ray_step_size.y;
+    } else { // ray moving upwards
+	step.y = 1;
+	ray_length.y = ((map_pos.y + 1) - ray.y) * ray_step_size.y;
+    }
+
+    // TODO: typedef a bool
+    int hit = 0;
+    float distance = 0.0f; // TODO: add .0f to other float inits
+    // read through this crap again
+    // could use heavy optimizations
+    while (!hit && distance < MAX_DISTANCE) {
+	if (ray_length.x < ray_length.y) {
+	    map_pos.x += step.x;
+	    distance = ray_length.x;
+	    ray_length.x += ray_step_size.x;
+	} else {
+	    map_pos.y += step.y;
+	    distance = ray_length.y;
+	    ray_length.y += ray_step_size.y;
+	}
+
+	if (map_pos.x >= 0 && map_pos.x < MAP_SIZE_X && map_pos.y >= 0 && map_pos.y < MAP_SIZE_Y) { // out of bounds guard
+	    // Check if ray lands in a wall
+	    if (GAME_MAP[(int) map_pos.y][(int) map_pos.x] != 0) {
+		hit = 1;
+	    }
+	}
+    }
+
+    Vector2 intersection;
+    if (hit) {
+	intersection = add_vec(&ray, mult_vec(&ray_dir, distance));
+    }
+
+    /*
     float view_angle = player->pos.angle - (float) player->fov/2;
 
-    for (int i = 0; i < screen->width; i++) {
-	Vector2 ray = {player->pos.x, player->pos.y, view_angle};
+    for (int x = 0; x < screen->width; x++) {
+	float camera_x = 2*x / (float) screen->width - 1;
+	Vector2 ray_dir = (Vector2){
+	    player->dir->x + player->plane->x * camera_x,
+	    player->dir->y + player->plane->y * camera_x
+	};
+
+	Vector2 ray = {player->pos->x, player->pos->y};
 	raywalk(&ray);
-	float distance = get_distance(&ray, &player->pos);
+	float distance = get_distance(&ray, player->pos);
 	float height = screen->height / (2*distance);
-	draw_ray(screen, i, height, player, &ray);
+	draw_ray(screen, x, height, player, &ray);
 	view_angle += (float) player->fov / screen->width;
     }
+    */
 }
 
 int main(void) {
@@ -127,7 +196,9 @@ int main(void) {
     SetTargetFPS(60);
 
     Vector2 *player_pos = &(Vector2){2, 2};
-    Character player = {player_pos, PLAYER_FOV, PLAYER_SPEED, PLAYER_ROT_RATE};
+    Vector2 *player_dir = &(Vector2){-1, 0}; // TODO: add auto normalization
+    Vector2 *player_plane = &(Vector2){0, 0.66}; // TODO: add auto plane calculations (perpendicular)
+    Character player = {player_pos, player_dir, player_plane, PLAYER_SPEED, PLAYER_ROT_RATE};
 
     while (!WindowShouldClose()) {
 	if (IsKeyDown(KEY_RIGHT)) rotate_vec(player.pos, player.rotation_rate);
