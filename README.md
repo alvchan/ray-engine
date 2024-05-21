@@ -5,7 +5,7 @@ An improved and expanded version of the raycaster engine written in Python from 
 Not overly complicated in terms of C code, but is a demonstration of raycasting as a form of practice for my C-fu.
 
 I have chosen to use raylib in this project for graphical applications to focus on 
-improving my C programming skills instead of OpenGL with its higher difficulty curve
+improving my C programming skills instead of OpenGL with its higher difficulty curve.
 
 ## Installation
 
